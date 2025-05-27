@@ -1,4 +1,4 @@
-# 📚 Course Search and Recommendation Engine using Elasticsearch and Django
+# 📚 Creating a Powerful Course Search and Recommendation Using Elasticsearch I
 
 In today's digital learning landscape, users expect fast, intelligent, and typo-tolerant search experiences when exploring online courses. This project demonstrates how to build a robust course search and recommendation engine using **Elasticsearch**, **Django**, and **MySQL**.
 
@@ -130,6 +130,12 @@ python manage.py migrate
 python manage.py index_courses
 ```
 
+### 6. Run the Development Server
+
+```bash
+python manage.py runserver
+```
+
 ## 📖 Learn More
 
 For a step-by-step explanation and deeper insights into the implementation, please refer to the full tutorial:
@@ -137,11 +143,4 @@ For a step-by-step explanation and deeper insights into the implementation, plea
 👉 [Creating a Powerful Course Search and Recommendation Using Elasticsearch I](https://your-blog-link.com)
 
 The post covers everything from Elasticsearch basics to building intelligent course recommendations with Django.
-
-### 6. Run the Development Server
-
-```bash
-python manage.py runserver
-```
-
 
