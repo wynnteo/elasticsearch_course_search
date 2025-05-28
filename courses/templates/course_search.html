@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Course Search</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 30px auto;
+      padding: 0 15px;
+    }
+    #suggestions {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 0;
+      margin-top: 0;
+      margin-bottom: 10px;
+      list-style: none;
+      background: #fff;
+      position: absolute;
+      width: 100%;
+      z-index: 10;
+    }
+    #suggestions li {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+    #suggestions li:hover {
+      background-color: #f0f0f0;
+    }
+    #results li {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+      list-style: none;
+    }
+    #results h3, #results p {
+      margin: 0;
+    }
+    #results small {
+      color: #666;
+    }
+    .highlight {
+      background-color: yellow;
+    }
+    .loading {
+      font-style: italic;
+      color: #999;
+    }
+    .search-container {
+      position: relative;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .filters select {
+      padding: 8px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Course Search</h2>
+
+<div class="search-container">
+  <input type="search" id="searchInput" placeholder="Search courses..." autocomplete="off" style="width:100%; padding:10px; font-size:16px;" />
+  <ul id="suggestions" hidden></ul>
+</div>
+
+<div class="filters">
+  <select id="level">
+    <option value="">All Levels</option>
+    <option value="beginner">Beginner</option>
+    <option value="intermediate">Intermediate</option>
+    <option value="advanced">Advanced</option>
+  </select>
+
+  <select id="category">
+    <option value="">All Categories</option>
+    <option value="programming">Programming</option>
+    <option value="design">Design</option>
+    <option value="marketing">Marketing</option>
+  </select>
+
+  <select id="lang">
+    <option value="">All Languages</option>
+    <option value="english">English</option>
+    <option value="chinese">Chinese</option>
+    <option value="malay">Malay</option>
+  </select>
+
+  <select id="source">
+    <option value="">All Sources</option>
+    <option value="coursera">Coursera</option>
+    <option value="udemy">Udemy</option>
+    <option value="youtube">YouTube</option>
+  </select>
+</div>
+
+<p id="loadingText" class="loading" hidden>Loading...</p>
+
+<ul id="results"></ul>
+
+<script>
+  const searchInput = document.getElementById('searchInput');
+  const suggestionsBox = document.getElementById('suggestions');
+  const resultsList = document.getElementById('results');
+  const loadingText = document.getElementById('loadingText');
+
+  const levelFilter = document.getElementById('level');
+  const categoryFilter = document.getElementById('category');
+  const langFilter = document.getElementById('lang');
+  const sourceFilter = document.getElementById('source');
+
+  let debounceTimer = null;
+
+  function getQueryParams() {
+    const query = searchInput.value.trim();
+    const params = new URLSearchParams();
+
+    if (query.length >= 3) params.append('q', query);
+    if (levelFilter.value) params.append('level', levelFilter.value);
+    if (categoryFilter.value) params.append('category', categoryFilter.value);
+    if (langFilter.value) params.append('lang', langFilter.value);
+    if (sourceFilter.value) params.append('source', sourceFilter.value);
+
+    return params.toString();
+  }
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const query = searchInput.value.trim();
+
+    if (query.length < 3) {
+      suggestionsBox.hidden = true;
+      resultsList.innerHTML = '';
+      loadingText.hidden = true;
+      return;
+    }
+
+    debounceTimer = setTimeout(() => {
+      fetchResults();
+    }, 300);
+  });
+
+  [levelFilter, categoryFilter, langFilter, sourceFilter].forEach(el =>
+    el.addEventListener('change', fetchResults)
+  );
+
+  suggestionsBox.addEventListener('click', (event) => {
+    if (event.target.tagName === 'LI') {
+      searchInput.value = event.target.textContent;
+      suggestionsBox.hidden = true;
+      fetchResults();
+    }
+  });
+
+  async function fetchResults() {
+    loadingText.hidden = false;
+    resultsList.innerHTML = '';
+    suggestionsBox.hidden = true;
+
+    try {
+      const queryParams = getQueryParams();
+      const response = await fetch(`/courses/search?${queryParams}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${response.status}\n${errorText}`);
+      }
+
+      console.log(response)
+
+      const data = await response.json();
+      renderSuggestions(data.suggestions || []);
+      renderResults(data.results || [], data.highlighted || {});
+    } catch (error) {
+      console.error('Fetch error:', error);
+      resultsList.innerHTML = '<li>Error fetching results</li>';
+    }
+
+    loadingText.hidden = true;
+  }
+
+  function renderSuggestions(suggestions) {
+    if (suggestions.length === 0) {
+      suggestionsBox.hidden = true;
+      return;
+    }
+
+    suggestionsBox.innerHTML = suggestions.map(s =>
+      `<li>${escapeHtml(s)}</li>`
+    ).join('');
+    suggestionsBox.hidden = false;
+  }
+
+  function renderResults(results, highlights) {
+    if (results.length === 0) {
+      resultsList.innerHTML = '<li>No results found.</li>';
+      return;
+    }
+
+    resultsList.innerHTML = results.map(course => {
+      const highlightedName = highlights[course.id]?.name || course.name || '';
+      const highlightedDesc = highlights[course.id]?.description || course.description || '';
+
+      return `
+        <li>
+          <h3>${highlightedName}</h3>
+          <p>${highlightedDesc}</p>
+          <small>Score: ${course.score.toFixed(2)}</small>
+        </li>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, function(m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m];
+    });
+  }
+</script>
+
+</body>
+</html>

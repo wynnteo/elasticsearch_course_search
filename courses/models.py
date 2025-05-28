@@ -8,6 +8,7 @@ class Course(models.Model):
     sub_category_id = models.IntegerField()
     language = models.CharField(max_length=50)
     source = models.CharField(max_length=50)
+    instructor = models.CharField(max_length=150)
     level = models.CharField(max_length=50, blank=True, null=True)
     is_valid = models.BooleanField(default=True)
     modified_at = models.DateTimeField(auto_now=True)
